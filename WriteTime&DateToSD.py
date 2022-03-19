@@ -17,22 +17,35 @@ myI2C = busio.I2C(board.SCL, board.SDA)
 rtc = adafruit_pcf8523.PCF8523(myI2C)
 
 
-if False:   # Leave as False unless you want to reset the time that the RTC keeps!
+if False:   # change to True if you want to write the time!
     #                     year, mon, date, hour, min, sec, wday, yday, isdst
-    
-    #   t is an instance of the struct_time class. It is being passed through the time function to collect and store time data of type integer!
+    #   t is a time object
     t = time.struct_time((2022,  03,   09,   15,  56,  15,    0,   -1,    -1))
-    #   Here we are using the struct_time object "t" to write time keeping information to the RTC circuit. 
-    rtc.datetime = t
 
-# "spi" is created as an instance of class SPI and is passed through the busio function, which assigns the pins of the Serial Peripheral Interface. 
+    #print("Setting time to:", t)     # uncomment for debugging
+    rtc.datetime = t
+    #print()
+
+# while True:
+#    t = rtc.datetime
+#    #print(t)     # uncomment for debugging
+
+#    print("The date is %s %d/%d/%d" % (days[t.tm_wday], t.tm_mday, t.tm_mon, t.tm_year))
+#    print("The time is %d:%02d:%02d" % (t.tm_hour, t.tm_min, t.tm_sec))
+
+#    time.sleep(1) # wait a second
+
+# Creates object that connects SPI bus and a digital output for the microSD card's CS line.
+# The pin name should match our wiring.
 spi = busio.SPI(board.SCK, MOSI=board.MOSI, MISO=board.MISO)
 # This is the chip select line on the M4 board.
 cs = digitalio.DigitalInOut(board.D10)
 
-# "sdcard" is an instance of the SDCard class, which is passed through the adafruit_sdcard function, which uses information from the "spi" and "cs" objects.
+# This creates the microSD card object and the filesystem object:
+# Inputs are the spi and cs objects.
 sdcard = adafruit_sdcard.SDCard(spi, cs)
-# This sets up the file storage system, the FAT16. 
+# The microSD card object and the filesystem object are now
+# being passed through Vfsfat class.
 vfs = storage.VfsFat(sdcard)
 
 # We can now make the path /sd on the CircuitPython
@@ -40,21 +53,22 @@ vfs = storage.VfsFat(sdcard)
 storage.mount(vfs, "/sd")
 
 # Creates a file and writes name inside a text file along the path.
-with open("/sd/timestamp.txt", "w") as f:
-    f.write("Profile Name\r\n")
+with open("/sd/stamp.csv", "w") as f:
+    f.write("First, Last, Date, Time\r\n")
 
 
 print("Logging timestamp into filesystem")
 
 # appending timestamp to file
 
-with open("/sd/timestamp.txt", "a") as f:
+with open("/sd/stamp.csv", "a") as f:
     led.value = True
     # This is supposed to be the timestamp
     # Not sure if it updates every time
     t = rtc.datetime
 
-    f.write( "%d/%d/%d" % (t.tm_mday, t.tm_mon, t.tm_year))
-    f.write("%d:%02d:%02d " % (t.tm_hour, t.tm_min, t.tm_sec))
+    f.write("Val, McGee, ")
+    f.write("%d/%d/%d, " % (t.tm_mday, t.tm_mon, t.tm_year))
+    f.write("%d:%02d:%02d \r\n" % (t.tm_hour, t.tm_min, t.tm_sec))
     led.value = False  # turn off LED to indicate we're done
 
